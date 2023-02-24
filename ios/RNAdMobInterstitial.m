@@ -16,8 +16,9 @@ static NSString *const kEventAdImpression = @"interstitialAdImpression";
 
 @implementation RNAdMobInterstitial
 {
-    GADInterstitialAd  *_interstitial;
+    GAMInterstitialAd  *_interstitial;
     NSString *_adUnitID;
+    NSDictionary *_customTargeting;
     NSArray *_testDevices;
     BOOL hasListeners;
 }
@@ -52,6 +53,11 @@ RCT_EXPORT_METHOD(setAdUnitID:(NSString *)adUnitID)
     _adUnitID = adUnitID;
 }
 
+RCT_EXPORT_METHOD(setCustomTargeting:(NSDictionary *)customTargeting)
+{
+    _customTargeting = customTargeting;
+}
+
 RCT_EXPORT_METHOD(setTestDevices:(NSArray *)testDevices)
 {
     _testDevices = RNAdMobProcessTestDevices(testDevices, kGADSimulatorID);
@@ -69,10 +75,11 @@ RCT_EXPORT_METHOD(requestAd:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromise
         }
     }
 
-    GADRequest *request = [GADRequest request];
-    [GADInterstitialAd loadWithAdUnitID:_adUnitID
+    GAMRequest *request = [GAMRequest request];
+    request.customTargeting = _customTargeting;
+    [GAMInterstitialAd loadWithAdManagerAdUnitID:_adUnitID
                                 request:request
-                      completionHandler:^(GADInterstitialAd * _Nullable interstitialAd, NSError * _Nullable error) {
+                      completionHandler:^(GAMInterstitialAd * _Nullable interstitialAd, NSError * _Nullable error) {
         if (error) {
             if (self->hasListeners) {
                 NSDictionary *jsError = RCTJSErrorFromCodeMessageAndNSError(@"E_AD_REQUEST_FAILED", error.localizedDescription, error);

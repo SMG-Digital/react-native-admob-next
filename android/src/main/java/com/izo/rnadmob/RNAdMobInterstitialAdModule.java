@@ -15,6 +15,8 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableNativeArray;
+import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.google.android.gms.ads.AdError;
@@ -23,8 +25,9 @@ import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.RequestConfiguration;
-import com.google.android.gms.ads.interstitial.InterstitialAd;
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.android.gms.ads.admanager.AdManagerAdRequest;
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAd;
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAdLoadCallback;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -42,8 +45,9 @@ public class RNAdMobInterstitialAdModule extends ReactContextBaseJavaModule {
     public static final String EVENT_AD_CLOSED = "interstitialAdClosed";
     public static final String EVENT_AD_IMPRESSION = "interstitialAdImpression";
 
-    InterstitialAd mInterstitialAd;
+    AdManagerInterstitialAd mInterstitialAd;
     String adUnitID;
+    ReadableMap customTargeting;
     String[] testDevices;
 
     @Override
@@ -62,6 +66,11 @@ public class RNAdMobInterstitialAdModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void setAdUnitID(String adUnitID) {
         this.adUnitID = adUnitID;
+    }
+
+    @ReactMethod
+    public void setCustomTargeting(final ReadableMap customTargeting) {
+        this.customTargeting = customTargeting;
     }
 
     @ReactMethod
@@ -89,6 +98,7 @@ public class RNAdMobInterstitialAdModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void requestAd(final Promise promise) {
+        RNAdMobInterstitialAdModule self = this;
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run () {
@@ -122,9 +132,9 @@ public class RNAdMobInterstitialAdModule extends ReactContextBaseJavaModule {
                     }
                 };
 
-                InterstitialAdLoadCallback interstitialAdLoadCallback = new InterstitialAdLoadCallback() {
+                AdManagerInterstitialAdLoadCallback interstitialAdLoadCallback = new AdManagerInterstitialAdLoadCallback() {
                     @Override
-                    public void onAdLoaded(@NonNull @NotNull InterstitialAd interstitialAd) {
+                    public void onAdLoaded(@NonNull @NotNull AdManagerInterstitialAd interstitialAd) {
                         super.onAdLoaded(interstitialAd);
 
                         mInterstitialAd = interstitialAd;
@@ -170,10 +180,22 @@ public class RNAdMobInterstitialAdModule extends ReactContextBaseJavaModule {
                     }
                 };
 
-                AdRequest.Builder adRequestBuilder = new AdRequest.Builder();
-                AdRequest adRequest = adRequestBuilder.build();
+                AdManagerAdRequest.Builder adRequestBuilder = new AdManagerAdRequest.Builder();
+                AdManagerAdRequest adRequest = adRequestBuilder.build();
+                if (self.customTargeting != null) {
+                    ReadableMapKeySetIterator iterator = self.customTargeting.keySetIterator();
+                    while (iterator.hasNextKey()) {
+                        String key = iterator.nextKey();
+                        ReadableArray value = self.customTargeting.getArray(key);
+                        List<String> values = new ArrayList<String>();
+                        for(int i = 0; i < value.size(); i++){
+                            values.add(value.getString(i));
+                        }
+                        adRequest = adRequestBuilder.addCustomTargeting(key, values).build();
+                    }
+                }
 
-                InterstitialAd.load(getCurrentActivity(), adUnitID, adRequest, interstitialAdLoadCallback);
+                AdManagerInterstitialAd.load(getCurrentActivity(), adUnitID, adRequest, interstitialAdLoadCallback);
             }
         });
     }
